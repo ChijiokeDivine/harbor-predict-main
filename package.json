@@ -1,0 +1,41 @@
+{
+  "name": "prediction-market-monad",
+  "version": "1.0.0",
+  "description": "Prediction Market Flow using Monad Testnet",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "compile": "cd contracts && npx hardhat compile",
+    "deploy": "cd contracts && npx hardhat run scripts/deploy.js --network monad-testnet",
+    "test": "cd contracts && npx hardhat test"
+  },
+  "keywords": [
+    "prediction-market",
+    "monad",
+    "defi",
+    "blockchain"
+  ],
+  "author": "Poco The Clown",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.0.0",
+    "concurrently": "^8.2.0",
+    "hardhat": "^2.26.1"
+  },
+  "dependencies": {
+    "@chainlink/contracts": "^1.5.0",
+    "@openzeppelin/contracts": "^4.9.5",
+    "dotenv": "^17.2.0",
+    "ethers": "^6.15.0"
+  },
+  "main": "hardhat.config.js",
+  "directories": {
+    "test": "test"
+  },
+  "type": "commonjs"
+}
