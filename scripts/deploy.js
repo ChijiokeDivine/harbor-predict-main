@@ -31,8 +31,9 @@ async function main() {
   // const deployTx = await PredictionMarketFactory.deploy({ gasPrice });
   
   // Deploy contract
+  const ROUTER_ADDRESS = "0x5aD0A67f4Da0E8665a3fbf15E4215A780407Cf33";
   console.log("⏳ Deploying PredictionMarket...");
-  const predictionMarket = await PredictionMarketFactory.deploy();
+  const predictionMarket = await PredictionMarketFactory.deploy(ROUTER_ADDRESS);
 
   // Wait for deployment to be mined
   const receipt = await predictionMarket.waitForDeployment();
