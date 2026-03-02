@@ -14,9 +14,9 @@ module.exports = {
     hardhat: {
       chainId: 1337,
     },
-    "monad-testnet": {
-      url: "https://testnet-rpc.monad.xyz/",
-      chainId: 10143, 
+    "sepolia": {
+      url: `https://base-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+      chainId: 84532, 
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       gasPrice: 10000000
     },
