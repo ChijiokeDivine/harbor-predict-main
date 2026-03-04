@@ -31,7 +31,7 @@ async function main() {
   // const deployTx = await PredictionMarketFactory.deploy({ gasPrice });
   
   // Deploy contract
-  const FORWARDER_ADDRESS = "0x15fC6ae953E024d975e77382eEeC56A9101f9F88";
+  const FORWARDER_ADDRESS = process.env.FORWARDER_ADDRESS;
   console.log("⏳ Deploying PredictionMarket...");
   const predictionMarket = await PredictionMarketFactory.deploy(FORWARDER_ADDRESS);
 
