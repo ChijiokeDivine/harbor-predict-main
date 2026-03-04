@@ -35,7 +35,7 @@
 
 ```bash
 # Clone and setup
-git clone https://github.com/awortuibenem/harbor-predict
+git clone https://github.com/ChijiokeDivine/harbor-predict-main
 cd harbor-predict-main
 
 # Install dependencies
@@ -635,425 +635,39 @@ console.log("Liquidity reserve:", ethers.formatEther(stats[3]));
 console.log("Contract balance:", ethers.formatEther(stats[4]));
 ```
 
----
-
-#### `getMarketVolume()`
-Get user trading volume on a market (excludes initial liquidity).
-
-```solidity
-function getMarketVolume(uint256 marketId) 
-    external view marketExists(marketId) returns (uint256)
+### Resolving a Market (Owner Only)
+```js
+await predictionMarket.resolveMarket(1, true); // true = YES wins
 ```
 
-```javascript
-const volume = await predictionMarket.getMarketVolume(1);
-console.log("Trading volume:", ethers.formatEther(volume));
+### Claiming Rewards
+```js
+await predictionMarket.claimReward(1);
 ```
 
----
-
-## 📈 Market Lifecycle
-
-### Detailed Timeline
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│              MARKET STATE TRANSITIONS                        │
-└─────────────────────────────────────────────────────────────┘
-
-State: CREATED → OPEN → CLOSED → RESOLVED → CLAIMED
-─────────────────────────────────────────────────────
-
-[CREATED]
-├─ Market initialized with liquidity
-├─ Initial YES/NO pools: 0.005 ETH each
-├─ Exists = true, Resolved = false
-└─ Event: MarketCreated
-
-      ↓
-      
-[OPEN FOR BETTING]
-├─ block.timestamp < startTime ✓
-├─ Users can placeBet(marketId, side)
-├─ Bets recorded, fees collected
-├─ Pools updated dynamically
-└─ Event: BetPlaced
-
-      ↓ (when block.timestamp >= endTime)
-      
-[BETTING CLOSED]
-├─ No new bets accepted
-├─ Waiting for resolution
-└─ Next: resolveMarket() call
-
-      ↓
-      
-[RESOLUTION BUFFER]
-├─ 5 minute buffer after endTime
-├─ Prevents immediate resolution
-├─ Block timestamp must be ≥ endTime + 300 seconds
-└─ Then: _resolveMarket() or onReport()
-
-      ↓
-      
-[RESOLVED]
-├─ Resolved = true
-├─ Outcome recorded (YES/NO)
-├─ Event: MarketResolved
-└─ Ready for claims
-
-      ↓
-      
-[CLAIMS DISTRIBUTED]
-├─ Winners call: claimReward(), claimFor(), batchClaimFor()
-├─ Losers receive nothing
-├─ Refund eligible users call: claimRefund()
-└─ Event: RewardClaimed
+### Emergency Withdraw (Owner Only)
+```js
+await predictionMarket.emergencyWithdraw();
 ```
 
----
-
-## 💸 Fee Structure
-
-### Fee Configuration
-
-| Item | Value | Details |
-|------|-------|---------|
-| **Platform Fee** | 150 bps | 1.5% of all bets & rewards |
-| **Market Liquidity** | 0.01 ETH | Required to create market |
-| **Liquidity Split** | 50/50 | 0.005 ETH per side (YES/NO) |
-
-### Fee Flow Diagram
-
-```
-User Bet: 10 ETH
-    │
-    ├─ Calculate Fee: 10 × 150 / 10000 = 0.15 ETH
-    │
-    ├─ Net Stake: 10 - 0.15 = 9.85 ETH
-    │
-    └─ Add to Pool (YES or NO)
-    
-    [At Claim Time]
-    
-Winner's Payout Calculation:
-    │
-    ├─ Total Pool: 100 ETH (50 YES + 50 NO)
-    ├─ Winning Pool: 50 ETH (YES wins)
-    │
-    ├─ User's Gross Reward: (9.85 × 100) / 50 = 19.70 ETH
-    │
-    ├─ Fee on Reward: 19.70 × 150 / 10000 = 0.2955 ETH
-    │
-    └─ User's Net Payout: 19.70 - 0.2955 = 19.4045 ETH
+### Cancel Market (Owner Only)
+```js
+await predictionMarket.cancelMarket(1);
 ```
 
-### Fee Collection Routes
-
-1. **placeBet()** → Deducts fee immediately
-2. **claimReward()** → Deducts fee from calculated reward
-3. **batchClaimFor()** → Batched fee collection (optimized)
-
----
-
-## 📍 Important Constants
-
-```solidity
-// Fee
-PLATFORM_FEE_BPS = 150        // 1.5% (basis points)
-
-// Market Liquidity
-MARKET_LIQUIDITY = 0.01 ether // 10 million wei (0.01 ETH)
-
-// Batching
-MAX_BATCH_SIZE = 100          // Max users per batchClaimFor
-
-// Timing
-RESOLUTION_BUFFER = 5 minutes // 300 seconds
-```
-
----
-
-## 🔌 Integration Examples
-
-### Using ethers.js v6
-
-#### Setup Contract Instance
-```javascript
-const { ethers } = require("ethers");
-
-// Connect as signer (for transactions)
-const provider = new ethers.JsonRpcProvider(
-  "https://base-sepolia.g.alchemy.com/v2/YOUR_API_KEY"
-);
-const signer = new ethers.Wallet(PRIVATE_KEY, provider);
-
-// Load contract ABI
-const PredictionMarketABI = require("./artifacts/contracts/PredictionMarket.sol/PredictionMarket.json").abi;
-
-// Create contract instance
-const predictionMarket = new ethers.Contract(
-  CONTRACT_ADDRESS,
-  PredictionMarketABI,
-  signer
-);
-```
-
-#### Complete Market Lifecycle Flow
-```javascript
-async function runFullMarketExample() {
-  console.log("🎯 Starting Market Lifecycle Demo\n");
-
-  // 1. Fund Liquidity Reserve
-  console.log("1️⃣ Funding liquidity reserve...");
-  let tx = await predictionMarket.fundLiquidityReserve({
-    value: ethers.parseEther("1")
-  });
-  await tx.wait();
-  console.log("✅ Reserve funded with 1 ETH\n");
-
-  // 2. Create Market
-  console.log("2️⃣ Creating prediction market...");
-  const endTime = Math.floor(Date.now() / 1000) + 86400; // 24 hours
-  tx = await predictionMarket.createMarket(
-    "Will Ethereum reach $5000 by end of month?",
-    Math.floor(Date.now() / 1000) + 3600,  // startTime: 1 hour from now
-    endTime,
-    ethers.parseEther("0.5"),    // minBet
-    ethers.parseEther("10")      // maxBet
-  );
-  const receipt = await tx.wait();
-  console.log("✅ Market created with ID: 1\n");
-
-  // 3. Place Bets
-  console.log("3️⃣ Placing bets on market...");
-  
-  // User 1 bets YES
-  tx = await predictionMarket.placeBet(1, true, {
-    value: ethers.parseEther("2")
-  });
-  await tx.wait();
-  console.log("✅ User 1 bet 2 ETH on YES");
-
-  // User 2 bets NO
-  tx = await predictionMarket.placeBet(1, false, {
-    value: ethers.parseEther("3")
-  });
-  await tx.wait();
-  console.log("✅ User 2 bet 3 ETH on NO\n");
-
-  // 4. Check Market Status
-  console.log("4️⃣ Checking market details...");
-  const market = await predictionMarket.getMarket(1);
-  console.log(`📊 Market: "${market.question}"`);
-  console.log(`   YES pool: ${ethers.formatEther(market.yesPool)} ETH`);
-  console.log(`   NO pool: ${ethers.formatEther(market.noPool)} ETH`);
-  console.log(`   Status: ${market.resolved ? "RESOLVED" : "OPEN"}\n`);
-
-  // 5. Check Odds
-  console.log("5️⃣ Getting current odds...");
-  const [yesOdds, noOdds] = await predictionMarket.getOdds(1);
-  console.log(`📈 YES odds: ${(yesOdds / 10000).toFixed(2)}`);
-  console.log(`📈 NO odds: ${(noOdds / 10000).toFixed(2)}\n`);
-
-  // 6. Resolve Market (after endTime)
-  console.log("6️⃣ Resolving market (YES wins)...");
-  // In real scenario, wait for endTime + buffer
-  tx = await predictionMarket.resolveMarket(1, true);
-  await tx.wait();
-  console.log("✅ Market resolved: YES wins!\n");
-
-  // 7. Claim Rewards
-  console.log("7️⃣ Claiming rewards...");
-  tx = await predictionMarket.claimReward(1);
-  await tx.wait();
-  console.log("✅ User 1 claimed reward\n");
-
-  // 8. Platform Statistics
-  console.log("8️⃣ Final Platform Statistics:");
-  const stats = await predictionMarket.getPlatformStats();
-  console.log(`💵 Lifetime fees: ${ethers.formatEther(stats[0])} ETH`);
-  console.log(`💵 Withdrawn: ${ethers.formatEther(stats[1])} ETH`);
-  console.log(`💵 Withdrawable: ${ethers.formatEther(stats[2])} ETH`);
-  console.log(`💾 Reserve: ${ethers.formatEther(stats[3])} ETH`);
-  console.log(`💰 Contract balance: ${ethers.formatEther(stats[4])} ETH`);
-}
-
-// Run example
-runFullMarketExample().catch(console.error);
-```
-
-#### Error Handling
-```javascript
-async function placeBetWithErrorHandling(marketId, side, amount) {
-  try {
-    // Validate inputs
-    if (amount <= 0) {
-      throw new Error("Bet amount must be positive");
-    }
-
-    // Check market exists
-    const market = await predictionMarket.getMarket(marketId);
-    if (!market.exists) {
-      throw new Error(`Market ${marketId} does not exist`);
-    }
-
-    // Validate bet range
-    if (amount < market.minBet) {
-      throw new Error(`Bet below minimum of ${ethers.formatEther(market.minBet)} ETH`);
-    }
-    if (amount > market.maxBet) {
-      throw new Error(`Bet above maximum of ${ethers.formatEther(market.maxBet)} ETH`);
-    }
-
-    // Check user hasn't already bet
-    const hasUserBet = await predictionMarket.hasUserBet(marketId, signer.address);
-    if (hasUserBet) {
-      throw new Error("You have already bet on this market");
-    }
-
-    // Place the bet
-    const tx = await predictionMarket.placeBet(marketId, side, {
-      value: ethers.parseEther(amount.toString())
-    });
-
-    const receipt = await tx.wait();
-    console.log(`✅ Bet placed successfully!`);
-    console.log(`   Transaction: ${receipt.hash}`);
-    console.log(`   Block: ${receipt.blockNumber}`);
-
-    return receipt;
-
-  } catch (error) {
-    console.error("❌ Error placing bet:", error.message);
-    throw error;
-  }
-}
-```
-
----
-
-## 🔒 Security Features
-
-### Smart Contract Security
-
-| Feature | Implementation | Purpose |
-|---------|-----------------|---------|
-| **ReentrancyGuard** | OpenZeppelin nonReentrant | Prevent reentrancy attacks |
-| **Access Control** | Ownable pattern + require() | Authorization checks |
-| **Input Validation** | Comprehensive require() statements | Prevent invalid states |
-| **Fund Safety** | Low-level call with checks | Safe ETH transfers |
-| **Solvency Check** | _checkSolvency() | Protocol remains solvent |
-
-### Best Practices Applied
-
-✅ **Checks-Effects-Interactions Pattern**
-- Validate inputs first
-- Update state second
-- Make external calls last
-
-✅ **Safe Math**
-- Solidity ^0.8.19 (built-in overflow protection)
-- Carefully ordered operations
-
-✅ **Event Emissions**
-- Complete event logging
-- Enables off-chain indexing
-
-✅ **Gas Optimization**
-- Batch operations support
-- Efficient storage writes
-- Unchecked loops where safe
-
----
-
-## 🐛 Troubleshooting
-
-### Common Issues & Solutions
-
-#### ❌ "Insufficient funds for gas"
-```
-Problem: Transaction reverted due to low ETH balance
-Solution: 
-  1. Fund wallet from faucet
-  2. Use lower gas prices
-  3. Check network is correct
-```
-
-#### ❌ "Only forwarder" Error
-```
-Problem: Called onReport() from unauthorized address
-Solution:
-  1. Verify forwarder address in contract
-  2. Use resolveMarket() for manual resolution
-  3. Check message sender
-```
-
-#### ❌ "Already bet on this market"
-```
-Problem: User attempted to place second bet
-Solution:
-  1. Check existing bet: getUserBet()
-  2. Claim/refund existing bet first
-  3. Then place new bet on different market
-```
-
-#### ❌ "Market betting phase has ended"
-```
-Problem: Bet placed after startTime
-Solution:
-  1. Check market startTime: getMarket()
-  2. Verify block.timestamp
-  3. Find open betting market
-```
-
-#### ❌ "Market has not ended"
-```
-Problem: Tried to resolve before endTime
-Solution:
-  1. Wait for endTime to pass
-  2. Add RESOLUTION_BUFFER (5 minutes)
-  3. Then call resolveMarket()
-```
-
-### Testing During Development
-
-```bash
-# Start local node
-npx hardhat node
-
-# In another terminal, run tests
-npx hardhat test --network localhost
-
-# Deploy locally
-npx hardhat run scripts/deploy.js --network localhost
-
-# Interact via console
-npx hardhat console --network localhost
-```
-
----
-
-## 📚 Additional Resources
-
-- **Hardhat Documentation**: https://hardhat.org/docs
-- **OpenZeppelin Contracts**: https://docs.openzeppelin.com/contracts
-- **ethers.js Documentation**: https://docs.ethers.org/v6
-- **Ethereum Development**: https://ethereum.org/en/developers
-- **Base Network**: https://docs.base.org
-
----
-
-## 📄 License
-
-MIT License - Copyright (c) 2024
-
----
-
-<div align="center">
-
-**Built with ❤️ for decentralized prediction markets**
-
-[⬆ back to top](#-harbor-predict---smart-prediction-market-contract)
-
-</div> 
+## Contract Functions
+- `createMarket(question, endTime, minBet, maxBet)`
+- `placeBet(marketId, side)`
+- `resolveMarket(marketId, outcome)`
+- `claimReward(marketId)`
+- `emergencyWithdraw()`
+- `cancelMarket(marketId)`
+- View functions: `getMarket`, `getUserBet`, `hasUserBet`, `getMarketCount`, `getOdds`
+
+## Notes
+- Only the contract owner can resolve, cancel, or emergency withdraw.
+- All times are in Unix timestamp (seconds).
+- All bets and payouts are in ETH (not MONAD).
+
+## License
+MIT 
