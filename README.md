@@ -1,6 +1,6 @@
-# 🎯 Harbor Predict - Smart Prediction Market Contract
+# Harbor Predict - Prediction Market Contract
 
-> **A sophisticated, gas-optimized prediction market smart contract** enabling decentralized binary outcome betting with automated reward distribution, liquidity management, and platform fee collection.
+> **A simple prediction market smart contract** enabling decentralized binary outcome betting with automated reward distribution, liquidity management, and platform fee collection.
 
 <div align="center">
 
