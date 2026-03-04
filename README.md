@@ -79,7 +79,7 @@ Call `placeBet(uint256 marketId, bool side)` and send ETH value within min/max b
 await predictionMarket.placeBet(1, true, { value: ethers.parseEther("2") });
 ```
 
-### Resolving a Market (Owner Only)
+### Resolving a Market
 ```js
 await predictionMarket.resolveMarket(1, true); // true = YES wins
 ```
@@ -89,15 +89,6 @@ await predictionMarket.resolveMarket(1, true); // true = YES wins
 await predictionMarket.claimReward(1);
 ```
 
-### Emergency Withdraw (Owner Only)
-```js
-await predictionMarket.emergencyWithdraw();
-```
-
-### Cancel Market (Owner Only)
-```js
-await predictionMarket.cancelMarket(1);
-```
 
 ## Contract Functions
 - `createMarket(question, endTime, minBet, maxBet)`
